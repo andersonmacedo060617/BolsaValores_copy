@@ -13,4 +13,4 @@ for empresa in teste3:
     #print(empresa.find_all("td"))
     result = {"razaoSocial": empresa.a.text, "codigoCVM": empresa.a['href'].replace("ResumoEmpresaPrincipal.aspx?codigoCvm=", ""),
               "nomePregao": empresa.find_all("td")[1].text, "segmento": empresa.find_all("td")[2].text.replace('\xa0', '')}
-    print(result)
+    print(empresa)

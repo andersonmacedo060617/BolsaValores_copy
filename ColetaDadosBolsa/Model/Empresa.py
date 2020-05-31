@@ -19,6 +19,11 @@ class Empresa(ModelBase):
         if len(empresa) == 0:
             self.save()
 
+    @classmethod
+    def findEmpresa(cls):
+        empresas = Empresa.select().execute()
+
+        return empresas
 
 
 

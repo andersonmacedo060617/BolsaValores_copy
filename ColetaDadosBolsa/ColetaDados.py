@@ -4,6 +4,7 @@ import string
 from bs4 import BeautifulSoup
 
 from Model.Empresa import Empresa
+from Model.Simbolo import Simbolo
 
 
 
@@ -12,7 +13,13 @@ def createTables():
         Empresa.create_table()
         print("Tabela Empresa Criada")
     except peewee.OperationalError:
-        print("Table Empresa Já Existe")
+        print("Falha ao criar tabelas", list(peewee.OperationalError.args))
+
+    try:
+        Simbolo.create_table()
+        print("Tabela Simbolo Criada")
+    except peewee.OperationalError:
+        print("Falha ao criar tabelas", list(peewee.OperationalError.args))
 
 def listaEmpresas():
     arrLetras = list(string.ascii_uppercase)
@@ -36,16 +43,12 @@ def listaEmpresas():
                 qtdTotalEmpresas = qtdTotalEmpresas + 1
                 result = {"razaoSocial": empresa.a.text,
                           "codigoCVM": empresa.a['href'].replace("ResumoEmpresaPrincipal.aspx?codigoCvm=", ""),
-                          "link": empresa.a['href'],
+                          "link": "http://bvmf.bmfbovespa.com.br/cias-listadas/empresas-listadas/" + empresa.a['href'],
                           "nomePregao": empresa.find_all("td")[1].text,
                           "segmento": empresa.find_all("td")[2].text.replace('\xa0', '')}
                 arrEmpresas.append(result)
 
     return arrEmpresas
-
-
-def coletaDadosEmpresa(codigoCVM):
-    print(listaEmpresas())
 
 def principal():
     listaEmpresa = listaEmpresas()
@@ -65,5 +68,41 @@ def principal():
         objeEmp.saveNotExists()
         cont = cont + 1
         print(str(cont) + " / " + str(qtdEmpresa))
+
+def dadosAdicionaisEmpresa():
+    lstEmpresas = Empresa.findEmpresa()
+    for empresa in list(lstEmpresas):
+
+        url = str.format("http://bvmf.bmfbovespa.com.br/pt-br/mercados/acoes/empresas/ExecutaAcaoConsultaInfoEmp.asp?CodCVM={0}", empresa.codigoCvm)
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        lstSimbolo = soup.find_all(class_ = "LinkCodNeg")
+        for i in lstSimbolo:
+            print(i.text)
+
+def coletaSimbolos():
+    lstEmpresas = Empresa.findEmpresa()
+    totalEmp = len(lstEmpresas)
+    contEmp = 0
+    for empresa in list(lstEmpresas):
+        contEmp = contEmp + 1
+        print("Empresa {} de {} - {}".format(contEmp, totalEmp, empresa.razaoSocial))
+        url = str.format("http://bvmf.bmfbovespa.com.br/pt-br/mercados/acoes/empresas/ExecutaAcaoConsultaInfoEmp.asp?CodCVM={0}", empresa.codigoCvm)
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        lstSimboloHtml = soup.find_all(class_ = "LinkCodNeg")
+        lstSimbolo = list(map(lambda x: x.text, lstSimboloHtml))
+        lstSimbolo = set(lstSimbolo)
+
+        for codSimbolo in lstSimbolo:
+            simbolo = Simbolo()
+            simbolo.empresa = empresa
+            simbolo.codSimbolo = codSimbolo
+            simbolo.saveNotExists()
+            print("Simbolo {} gravado".format(simbolo.codSimbolo))
+
+        print("Gravação de simbolos concluida!")
+
 #createTables()
-principal()
+coletaSimbolos()
+
